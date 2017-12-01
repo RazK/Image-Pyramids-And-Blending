@@ -6,7 +6,7 @@
 # DESCRIPTION:
 #############################################################
 import numpy as np
-import sys
+import sys, os
 from matplotlib.image import imread
 from matplotlib import pyplot as plt
 from skimage.color import rgb2gray
@@ -36,6 +36,9 @@ SUBSAMPLE_STEP = 2
 
 # Default test image
 TEST_IMAGE = "jerusalem.jpg"
+TEST_IM1 = "external/apple2.jpg"#""external/black20.jpg"
+TEST_IM2 = "external/apple.jpg"#"external/white20.jpg"
+TEST_MASK = "external/applemask.jpg"#"external/mask20.jpg"
 
 
 # Helper methods
@@ -138,7 +141,7 @@ def smart_max_levels(im, max_levels):
     :param max_levels: desired maximal levels
     :return: actual maximal levels.
     """
-    return int(min(np.log2(min(im.shape)) - PYRAMID_SMALLEST_LEVEL,
+    return int(min(np.ceil(np.log2(min(im.shape)) - PYRAMID_SMALLEST_LEVEL),
                    max_levels))
 
 
@@ -201,7 +204,7 @@ def build_laplacian_pyramid(im, max_levels, filter_size):
     return pyr, filter_vec
 
 
-def laplacian_to_image(lpyr, filter_vec, coeff):
+def laplacian_to_image(lpyr, filter_vec, coeff=None):
     """
     Reconstructs an image from its Laplacian Pyramid.
     :param lpyr:    A standard python array of images. Its length is
@@ -226,6 +229,9 @@ def laplacian_to_image(lpyr, filter_vec, coeff):
                     filtering effects.
     :return: The image reconstructed from the Laplacian Pyramid.
     """
+    # Default coeff = all ones
+    if coeff == None:
+        coeff = [1] * len(lpyr)
     clpyr = [lpyr[i]*coeff[i] for i in range(len(lpyr))]
     im = clpyr[-1]
     for level in range(len(clpyr) - 1, 0, -1):
@@ -285,6 +291,55 @@ def display_pyramid(pyr, levels):
     plt.show()
 
 
+def pyramid_blending(im1, im2, mask, max_levels, filter_size_im,
+                   filter_size_mask):
+    """
+    Blends two images of the same size 2^(max_levels−1)
+    :param im1: Input grayscale image to be blended with im2
+    :param im2: Input grayscale image to be blended with im1
+    :param mask:    A boolean (i.e. dtype == np.bool) mask containing True and
+                    False representing which parts of im1 and im2 should
+                    appear in the resulting im_blend.
+                    Note that a value of True corresponds to 1, and False
+                    corresponds to 0.
+    :param max_levels:  The max_levels parameter used when generating the
+                        Gaussian and Laplacian pyramids.
+    :param filter_size_im:  Size of the Gaussian filter (an odd scalar that
+                            represents a squared filter) which defining the
+                            filter used in the construction of the Laplacian
+                            pyramids of im1 and im2.
+    :param filter_size_mask:    Size of the Gaussian filter(an odd scalar that
+                                represents a squared filter) which defines
+                                the filter used in the construction of the
+                                Gaussian pyramid of mask.
+    :return:
+    """
+    # Validate shapes for images and mask
+    if not (im1.shape == im2.shape and im2.shape == mask.shape):
+        raise AttributeError("Images and mask must have the same shape")
+
+    # Construct Laplacian pyramids for images, Gaussian pyramid for mask
+    L1, filter1 = build_laplacian_pyramid(im1, max_levels, filter_size_im)
+    L2, filter2 = build_laplacian_pyramid(im2, max_levels, filter_size_im)
+    Gm, filterm = build_gaussian_pyramid(mask.astype(np.float64),
+                                         max_levels, filter_size_mask)
+    # Construct blended Laplacian pyramid
+    levels = min(len(L1), len(L2), len(Gm), max_levels)
+    Lout = [np.copy(im1)] * levels
+    for k in range(levels):
+        Lout[k] = Gm[k]*L1[k] + (1-Gm[k])*L2[k]
+    return laplacian_to_image(Lout, filter1)
+
+def relpath(filename):
+    """
+    Relate the path given by filename to the current directory.
+    For example, loading the file test.jpg in the subdirectory externals:
+    im = read_image(relpath(’externals/test.jpg’), 1)
+    :param filename: file path relative to current working directory
+    :return: Absolute path to filename
+    """
+    return os.path.join(os.path.dirname(__file__), filename)
+
 def main():
     """
     Tests for sol2.py
@@ -308,7 +363,7 @@ def main():
         for im in lpyr:
             plt.imshow(im, plt.cm.gray)
             plt.show()
-    if True:
+    if False:
         lpyr, vec = build_laplacian_pyramid(image, 30, 5)
         im2 = laplacian_to_image(lpyr, vec, [1-(0.5 ** i) for i in range(len(
             lpyr))])
@@ -327,6 +382,15 @@ def main():
         plt.show()
         render = render_pyramid(lpyr, 10)
         plt.imshow(render, plt.cm.gray)
+        plt.show()
+    if False:
+        print(relpath(TEST_IMAGE))
+    if True:
+        im1 = read_image(TEST_IM2, MODE_GRAY)
+        im2 = read_image(TEST_IM1, MODE_GRAY)
+        mask = read_image(TEST_MASK, MODE_GRAY)
+        blend = pyramid_blending(im1, im2, mask, 3, 3, 3)
+        plt.imshow(blend, plt.cm.gray)
         plt.show()
 
 
