@@ -226,11 +226,11 @@ def laplacian_to_image(lpyr, filter_vec, coeff):
                     filtering effects.
     :return: The image reconstructed from the Laplacian Pyramid.
     """
-    # lpyr = [lpyr[i]*coeff[i] for i in range(len(lpyr))]
-    im = lpyr[-1]
-    for level in range(len(lpyr) - 1, 0, -1):
-        expanded = expand_image(im, lpyr[level - 1].shape, len(filter_vec))
-        im = expanded + lpyr[level - 1]
+    clpyr = [lpyr[i]*coeff[i] for i in range(len(lpyr))]
+    im = clpyr[-1]
+    for level in range(len(clpyr) - 1, 0, -1):
+        expanded = expand_image(im, clpyr[level - 1].shape, len(filter_vec))
+        im = expanded + clpyr[level - 1]
     return im
 
 
@@ -308,9 +308,10 @@ def main():
         for im in lpyr:
             plt.imshow(im, plt.cm.gray)
             plt.show()
-    if False:
+    if True:
         lpyr, vec = build_laplacian_pyramid(image, 30, 5)
-        im2 = laplacian_to_image(lpyr, vec, 1)
+        im2 = laplacian_to_image(lpyr, vec, [1-(0.5 ** i) for i in range(len(
+            lpyr))])
         plt.imshow(im2, plt.cm.gray)
         plt.show()
     if False:
@@ -320,7 +321,7 @@ def main():
         render = render_pyramid(gpyr, 3)
         plt.imshow(render, plt.cm.gray)
         plt.show()
-    if True:
+    if False:
         lpyr, vec = build_laplacian_pyramid(image, 4, 2)
         plt.imshow(lpyr[0], plt.cm.gray)
         plt.show()
