@@ -166,11 +166,12 @@ def build_gaussian_pyramid(im, max_levels, filter_size):
     """
     filter_vec = gaussian_kernel(filter_size)
     levels = smart_max_levels(im, max_levels)
-    pyr = [im] * levels
+    pyr = [np.copy(im)] * levels
     for level in range(1, levels):
         pyr[level] = reduce_image(pyr[level - 1], filter_size)
 
     return pyr, filter_vec
+
 
 def build_laplacian_pyramid(im, max_levels, filter_size):
     """
@@ -195,9 +196,10 @@ def build_laplacian_pyramid(im, max_levels, filter_size):
                         profile. The filter_vec is normalized.
     """
     pyr, filter_vec = build_gaussian_pyramid(im, max_levels, filter_size)
-    for i in range(len(pyr)-1):
-        pyr[i] -= expand_image(pyr[i+1], pyr[i].shape, filter_size)
+    for i in range(len(pyr) - 1):
+        pyr[i] -= expand_image(pyr[i + 1], pyr[i].shape, filter_size)
     return pyr, filter_vec
+
 
 def laplacian_to_image(lpyr, filter_vec, coeff):
     """
@@ -224,12 +226,13 @@ def laplacian_to_image(lpyr, filter_vec, coeff):
                     filtering effects.
     :return: The image reconstructed from the Laplacian Pyramid.
     """
-    #lpyr = [lpyr[i]*coeff[i] for i in range(len(lpyr))]
+    # lpyr = [lpyr[i]*coeff[i] for i in range(len(lpyr))]
     im = lpyr[-1]
-    for level in range(len(lpyr)-1,0,-1):
-        expanded = expand_image(im, lpyr[level-1].shape, len(filter_vec))
-        im = expanded + lpyr[level-1]
+    for level in range(len(lpyr) - 1, 0, -1):
+        expanded = expand_image(im, lpyr[level - 1].shape, len(filter_vec))
+        im = expanded + lpyr[level - 1]
     return im
+
 
 def render_pyramid(pyr, levels):
     """
@@ -248,13 +251,23 @@ def render_pyramid(pyr, levels):
     cols = sum([level.shape[1] for level in pyr[:levels]])
     render = np.zeros((rows, cols))
     left = 0
-    for level in range(levels):
+    for level in range(min(len(pyr),levels)):
         bottom = pyr[level].shape[0]
         right = left + pyr[level].shape[1]
-        render[0:bottom, left:right] = pyr[level]
+        render[0:bottom, left:right] = stretch(pyr[level])
         left = right
 
     return render
+
+
+def stretch(im):
+    """
+    Returns the given image stretched to the range [0,1]
+    :param im: image to stretch
+    :return: image after stretching to [0,1]
+    """
+    minv, maxv = im.min(), im.max()
+    return (im - minv) / (maxv - minv)
 
 
 def display_pyramid(pyr, levels):
@@ -300,11 +313,21 @@ def main():
         im2 = laplacian_to_image(lpyr, vec, 1)
         plt.imshow(im2, plt.cm.gray)
         plt.show()
-    if True:
-        lpyr, vec = build_laplacian_pyramid(image, 30, 5)
-        render = render_pyramid(lpyr, 3)
+    if False:
+        gpyr, vec = build_gaussian_pyramid(image, 30, 5)
+        plt.imshow(gpyr[0], plt.cm.gray)
+        plt.show()
+        render = render_pyramid(gpyr, 3)
         plt.imshow(render, plt.cm.gray)
         plt.show()
+    if True:
+        lpyr, vec = build_laplacian_pyramid(image, 4, 2)
+        plt.imshow(lpyr[0], plt.cm.gray)
+        plt.show()
+        render = render_pyramid(lpyr, 10)
+        plt.imshow(render, plt.cm.gray)
+        plt.show()
+
 
 if (__name__ == "__main__"):
     main()
