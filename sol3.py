@@ -18,8 +18,14 @@ PIXEL_INTENSITY_MAX = 255
 PIXEL_INTENSITIES = PIXEL_INTENSITY_MAX + 1
 PIXEL_RANGE = (0, PIXEL_INTENSITIES)
 PIXEL_RANGE_NORMALIZED = (0, 1)
-PIXEL_CHANNELS_RGB = 3
-PIXEL_CHANNELS_RGBA = 4
+
+# RGB / RGBA Constants
+RED = 0
+GREEN = 1
+BLUE = 2
+ALPHA = 3
+PIXEL_CHANNELS_RGB = [RED, GREEN, BLUE]
+PIXEL_CHANNELS_RGBA = [RED, GREEN, BLUE, ALPHA]
 
 # Picture representation modes
 MODE_GRAY = 1
@@ -36,10 +42,12 @@ SUBSAMPLE_STEP = 2
 
 # Default test image
 TEST_IMAGE = "jerusalem.jpg"
-TEST_IM1 = "external/apple2.jpg"#""external/black20.jpg"
-TEST_IM2 = "external/apple.jpg"#"external/white20.jpg"
-TEST_MASK = "external/applemask.jpg"#"external/mask20.jpg"
-
+TEST_IM1 = "external/black20.jpg"
+TEST_IM2 = "external/white20.jpg"
+TEST_MASK = "external/mask20.jpg"
+IMAGE_MICHALI = "external/michali.jpg"
+IMAGE_ELLA = "external/ella.jpg"
+MASK_MICHELLA = "external/michella_mask.jpg"
 
 # Helper methods
 def read_image(filename, representation):
@@ -232,7 +240,7 @@ def laplacian_to_image(lpyr, filter_vec, coeff=None):
     # Default coeff = all ones
     if coeff == None:
         coeff = [1] * len(lpyr)
-    clpyr = [lpyr[i]*coeff[i] for i in range(len(lpyr))]
+    clpyr = [lpyr[i] * coeff[i] for i in range(len(lpyr))]
     im = clpyr[-1]
     for level in range(len(clpyr) - 1, 0, -1):
         expanded = expand_image(im, clpyr[level - 1].shape, len(filter_vec))
@@ -257,7 +265,7 @@ def render_pyramid(pyr, levels):
     cols = sum([level.shape[1] for level in pyr[:levels]])
     render = np.zeros((rows, cols))
     left = 0
-    for level in range(min(len(pyr),levels)):
+    for level in range(min(len(pyr), levels)):
         bottom = pyr[level].shape[0]
         right = left + pyr[level].shape[1]
         render[0:bottom, left:right] = stretch(pyr[level])
@@ -292,7 +300,7 @@ def display_pyramid(pyr, levels):
 
 
 def pyramid_blending(im1, im2, mask, max_levels, filter_size_im,
-                   filter_size_mask):
+                     filter_size_mask):
     """
     Blends two images of the same size 2^(max_levels−1)
     :param im1: Input grayscale image to be blended with im2
@@ -327,8 +335,9 @@ def pyramid_blending(im1, im2, mask, max_levels, filter_size_im,
     levels = min(len(L1), len(L2), len(Gm), max_levels)
     Lout = [np.copy(im1)] * levels
     for k in range(levels):
-        Lout[k] = Gm[k]*L1[k] + (1-Gm[k])*L2[k]
+        Lout[k] = Gm[k] * L1[k] + (1 - Gm[k]) * L2[k]
     return laplacian_to_image(Lout, filter1)
+
 
 def relpath(filename):
     """
@@ -339,6 +348,36 @@ def relpath(filename):
     :return: Absolute path to filename
     """
     return os.path.join(os.path.dirname(__file__), filename)
+
+
+def blendRGB(im1, im2, mask, max_levels, filter_size_im, filter_size_mask):
+    blend = np.zeros(im1.shape)
+    for channel in PIXEL_CHANNELS_RGB:
+        imc1, imc2 = im1[:, :, channel], im2[:, :, channel]
+        blend[:, :, channel] = pyramid_blending(imc1, imc2, mask, max_levels,
+                                                filter_size_im,
+                                                filter_size_mask)
+    return np.clip(blend[..., :], 0, 1)
+
+
+def blending_example1():
+    """
+    Blends two images using a mask and returns them and their blend.
+    :return: im1, im2, mask, im_blend
+    """
+    im1 = read_image(TEST_IM2, MODE_RGB)
+    im2 = read_image(TEST_IM1, MODE_RGB)
+    mask = read_image(TEST_MASK, MODE_GRAY)
+    blend = blendRGB(im1, im2, mask, 10, 3, 10)
+    return im1, im2, mask, blend
+
+
+def blending_example2():
+    """
+    Blends two images using a mask and returns them and their blend.
+    :return: im1, im2, mask, im_blend
+    """
+    pass
 
 def main():
     """
@@ -365,7 +404,7 @@ def main():
             plt.show()
     if False:
         lpyr, vec = build_laplacian_pyramid(image, 30, 5)
-        im2 = laplacian_to_image(lpyr, vec, [1-(0.5 ** i) for i in range(len(
+        im2 = laplacian_to_image(lpyr, vec, [1 - (0.5 ** i) for i in range(len(
             lpyr))])
         plt.imshow(im2, plt.cm.gray)
         plt.show()
@@ -386,13 +425,16 @@ def main():
     if False:
         print(relpath(TEST_IMAGE))
     if True:
-        im1 = read_image(TEST_IM2, MODE_GRAY)
-        im2 = read_image(TEST_IM1, MODE_GRAY)
-        mask = read_image(TEST_MASK, MODE_GRAY)
-        blend = pyramid_blending(im1, im2, mask, 3, 3, 3)
+        im1 = read_image(IMAGE_MICHALI, MODE_GRAY)
+        im2 = read_image(IMAGE_ELLA, MODE_GRAY)
+        mask = read_image(MASK_MICHELLA, MODE_GRAY)
+        blend = pyramid_blending(im1, im2, mask, 9, 9, 9)
         plt.imshow(blend, plt.cm.gray)
         plt.show()
-
+    if False:
+        im1, im2, mask, blend = blending_example1()
+        plt.imshow(blend)
+        plt.show()
 
 if (__name__ == "__main__"):
     main()
