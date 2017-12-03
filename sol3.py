@@ -40,14 +40,22 @@ KERNEL_GAUSS_BASE = np.array([1, 1])
 PYRAMID_SMALLEST_LEVEL = 4
 SUBSAMPLE_STEP = 2
 
-# Default test image
+# Images
 TEST_IMAGE = "jerusalem.jpg"
-TEST_IM1 = "external/black20.jpg"
-TEST_IM2 = "external/white20.jpg"
-TEST_MASK = "external/mask20.jpg"
-IMAGE_MICHALI = "external/michali.jpg"
-IMAGE_ELLA = "external/ella.jpg"
-MASK_MICHELLA = "external/michella_mask.jpg"
+TEST_IM1 = "external/black360.jpg"
+TEST_IM2 = "external/white360.jpg"
+TEST_MASK = "external/mask360.jpg"
+IMAGE_MICHALI = "external/michali3.jpg"
+IMAGE_ELLA = "external/ella2.jpg"
+MASK_MICHELLA = "external/mask_michella4.jpg"
+MASK_MICHELLA2 = "external/michella_mask2.jpg"
+IMAGE_APPLE1 = "external/apple.jpg"
+IMAGE_APPLE2 = "external/apple2.jpg"
+MASK_APPLE = "external/applemask.jpg"
+IMAGE_SPACE = "external/space2.jpg"
+IMAGE_LANDSCAPE = "external/landscape.jpg"
+MASK_LANDSPACE = "external/mask_landspace.jpg"
+
 
 # Helper methods
 def read_image(filename, representation):
@@ -117,7 +125,22 @@ def blur_spatial(im, kernel_size, factor=1):
     return convolve2d(im, kernel2D, mode='same')
 
 
-def reduce_image(im, kernel_size):
+def blur(im, kernel, factor=1):
+    """
+    Performs image blurring using 2D convolution between the image f and a
+    gaussian kernel g
+    :param im: image to be blurred (grayscale float64 image).
+    :param kernel_size: size of the gaussian kernel in each dimension (an
+                        odd integer).
+    :param factor: Factor by which to multiply the kernel.
+    :return: blurry image (grayscale float64 image).
+    """
+    kernel2D = np.expand_dims(kernel, axis=0)*factor
+    blurY = fconvolve(im, kernel2D.transpose())
+    return fconvolve(blurY, kernel2D)
+
+
+def reduce_image_spatial(im, kernel_size):
     """
     Reduce the given image by blurring and sub-smapling.
     Blurs the image with the given kernel, then sub-samples every 2nd pixel
@@ -129,18 +152,53 @@ def reduce_image(im, kernel_size):
     return blur_spatial(im, kernel_size)[::SUBSAMPLE_STEP, ::SUBSAMPLE_STEP]
 
 
-def expand_image(im, shape, kernel_size):
+def reduce_image(im, kernel):
+    """
+    Reduce the given image by blurring and sub-smapling.
+    Blurs the image with the given kernel, then sub-samples every 2nd pixel
+    in every 2nd row.
+    :param im: The image to reduce
+    :param kernel_size: The kernel to blur with.
+    :return: A reduced image of size im/4.
+    """
+    return blur(im, kernel)[::SUBSAMPLE_STEP, ::SUBSAMPLE_STEP]
+
+
+def expand_image_spatial(im, kernel_size, shape=None):
     """
     Expands the given image to the given shape by zero-padding and blurring.
     Pads every 2nd pixel with zero, then Blurs the image with the given
     kernel.
     :param im: The image to reduce
     :param kernel_size: The kernel to blur with.
+    :param shape:   The shape to expand the image to.
+                    Set to twice im.shape by default.
     :return: An expanded image of size im*4.
     """
+    if shape == None:
+        shape = tuple(dim * 2 for dim in im.shape)
     padded = np.zeros(shape)
     padded[::SUBSAMPLE_STEP, ::SUBSAMPLE_STEP] = im
     return blur_spatial(padded, kernel_size, 4)
+
+
+def expand_image(im, kernel, shape=None):
+    """
+    Expands the given image to the given shape by zero-padding and
+    blurring.
+    Pads every 2nd pixel with zero, then Blurs the image with the given
+    kernel.
+    :param im: The image to reduce
+    :param kernel_size: The kernel to blur with.
+    :param shape:   The shape to expand the image to.
+                    Set to twice im.shape by default.
+    :return: An expanded image of size im*4.
+    """
+    if shape == None:
+        shape = tuple(dim * 2 for dim in im.shape)
+    padded = np.zeros(shape)
+    padded[::SUBSAMPLE_STEP, ::SUBSAMPLE_STEP] = im
+    return blur(padded, kernel, 2)
 
 
 def smart_max_levels(im, max_levels):
@@ -179,7 +237,7 @@ def build_gaussian_pyramid(im, max_levels, filter_size):
     levels = smart_max_levels(im, max_levels)
     pyr = [np.copy(im)] * levels
     for level in range(1, levels):
-        pyr[level] = reduce_image(pyr[level - 1], filter_size)
+        pyr[level] = reduce_image(pyr[level - 1], filter_vec)
 
     return pyr, filter_vec
 
@@ -208,7 +266,7 @@ def build_laplacian_pyramid(im, max_levels, filter_size):
     """
     pyr, filter_vec = build_gaussian_pyramid(im, max_levels, filter_size)
     for i in range(len(pyr) - 1):
-        pyr[i] -= expand_image(pyr[i + 1], pyr[i].shape, filter_size)
+        pyr[i] -= expand_image(pyr[i + 1], filter_vec, pyr[i].shape)
     return pyr, filter_vec
 
 
@@ -243,7 +301,7 @@ def laplacian_to_image(lpyr, filter_vec, coeff=None):
     clpyr = [lpyr[i] * coeff[i] for i in range(len(lpyr))]
     im = clpyr[-1]
     for level in range(len(clpyr) - 1, 0, -1):
-        expanded = expand_image(im, clpyr[level - 1].shape, len(filter_vec))
+        expanded = expand_image(im, filter_vec, clpyr[level - 1].shape)
         im = expanded + clpyr[level - 1]
     return im
 
@@ -360,81 +418,52 @@ def blendRGB(im1, im2, mask, max_levels, filter_size_im, filter_size_mask):
     return np.clip(blend[..., :], 0, 1)
 
 
+def show_blending_example(im1, im2, mask, blend):
+    f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, sharex='col',
+                                               sharey='row')
+    ax1.imshow(im1)
+    ax2.imshow(im2)
+    ax3.imshow(mask, plt.cm.gray)
+    ax4.imshow(blend)
+
+
+def blending_example(im1_name, im2_name, mask_name):
+    """
+    Blends two images using a mask and returns them and their blend.
+    :return: im1, im2, mask, im_blend
+    """
+    im1 = read_image(relpath(im1_name), MODE_RGB)
+    im2 = read_image(relpath(im2_name), MODE_RGB)
+    mask = read_image(relpath(mask_name), MODE_GRAY)
+    blend = blendRGB(im1, im2, mask, 10, 3, 13)
+    show_blending_example(im1, im2, mask, blend)
+    return im1, im2, mask, blend
+
+
+def blending_example0():
+    """
+    Blends two images using a mask and returns them and their blend.
+    :return: im1, im2, mask, im_blend
+    """
+    return blending_example(TEST_IM1, TEST_IM2, TEST_MASK)
+
 def blending_example1():
     """
     Blends two images using a mask and returns them and their blend.
     :return: im1, im2, mask, im_blend
     """
-    im1 = read_image(TEST_IM2, MODE_RGB)
-    im2 = read_image(TEST_IM1, MODE_RGB)
-    mask = read_image(TEST_MASK, MODE_GRAY)
-    blend = blendRGB(im1, im2, mask, 10, 3, 10)
-    return im1, im2, mask, blend
+    return blending_example(IMAGE_MICHALI, IMAGE_ELLA, MASK_MICHELLA)
 
+def blending_example11():
+    """
+    Blends two images using a mask and returns them and their blend.
+    :return: im1, im2, mask, im_blend
+    """
+    return blending_example(IMAGE_ELLA, IMAGE_MICHALI, MASK_MICHELLA)
 
 def blending_example2():
     """
     Blends two images using a mask and returns them and their blend.
     :return: im1, im2, mask, im_blend
     """
-    pass
-
-def main():
-    """
-    Tests for sol2.py
-    """
-    image = read_image(TEST_IMAGE, MODE_GRAY)
-    kernel = gaussian_kernel(5)
-    if False:
-        plt.imshow(image, plt.cm.gray)
-        plt.show()
-    if False:
-        print(kernel)
-        gpyr, vec = build_gaussian_pyramid(image, 30, 5)
-        for im in gpyr:
-            plt.imshow(im, plt.cm.gray)
-            plt.show()
-    if False:
-        plt.imshow(expand_image(image, 10), plt.cm.gray)
-        plt.show()
-    if False:
-        lpyr, vec = build_laplacian_pyramid(image, 30, 5)
-        for im in lpyr:
-            plt.imshow(im, plt.cm.gray)
-            plt.show()
-    if False:
-        lpyr, vec = build_laplacian_pyramid(image, 30, 5)
-        im2 = laplacian_to_image(lpyr, vec, [1 - (0.5 ** i) for i in range(len(
-            lpyr))])
-        plt.imshow(im2, plt.cm.gray)
-        plt.show()
-    if False:
-        gpyr, vec = build_gaussian_pyramid(image, 30, 5)
-        plt.imshow(gpyr[0], plt.cm.gray)
-        plt.show()
-        render = render_pyramid(gpyr, 3)
-        plt.imshow(render, plt.cm.gray)
-        plt.show()
-    if False:
-        lpyr, vec = build_laplacian_pyramid(image, 4, 2)
-        plt.imshow(lpyr[0], plt.cm.gray)
-        plt.show()
-        render = render_pyramid(lpyr, 10)
-        plt.imshow(render, plt.cm.gray)
-        plt.show()
-    if False:
-        print(relpath(TEST_IMAGE))
-    if True:
-        im1 = read_image(IMAGE_MICHALI, MODE_GRAY)
-        im2 = read_image(IMAGE_ELLA, MODE_GRAY)
-        mask = read_image(MASK_MICHELLA, MODE_GRAY)
-        blend = pyramid_blending(im1, im2, mask, 9, 9, 9)
-        plt.imshow(blend, plt.cm.gray)
-        plt.show()
-    if False:
-        im1, im2, mask, blend = blending_example1()
-        plt.imshow(blend)
-        plt.show()
-
-if (__name__ == "__main__"):
-    main()
+    return blending_example(IMAGE_LANDSCAPE, IMAGE_SPACE, MASK_LANDSPACE)
