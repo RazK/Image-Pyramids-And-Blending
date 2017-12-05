@@ -1,0 +1,2 @@
+Q1: What does it mean to multiply each level in a different value? What do we try to control on?
+A1: This means giving different intensities to different levels of detail, resulting in blurred (and darker) images if the last elements in the coefficient vector are larger than the first ones, or brighter and consisting mostly of edge details if the first ones are larger than the latter.

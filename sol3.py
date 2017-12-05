@@ -51,7 +51,7 @@ MASK_MICHELLA = "external/mask_michella4.jpg"
 MASK_MICHELLA2 = "external/michella_mask2.jpg"
 IMAGE_APPLE1 = "external/apple.jpg"
 IMAGE_APPLE2 = "external/apple2.jpg"
-MASK_APPLE = "external/applemask.jpg"
+MASK_APPLE = "external/mask_apple.jpg"
 IMAGE_SPACE = "external/space2.jpg"
 IMAGE_LANDSCAPE = "external/landscape.jpg"
 MASK_LANDSPACE = "external/mask_landspace.jpg"
@@ -135,7 +135,7 @@ def blur(im, kernel, factor=1):
     :param factor: Factor by which to multiply the kernel.
     :return: blurry image (grayscale float64 image).
     """
-    kernel2D = np.expand_dims(kernel, axis=0)*factor
+    kernel2D = np.expand_dims(kernel, axis=0) * factor
     blurY = fconvolve(im, kernel2D.transpose())
     return fconvolve(blurY, kernel2D)
 
@@ -425,6 +425,7 @@ def show_blending_example(im1, im2, mask, blend):
     ax2.imshow(im2)
     ax3.imshow(mask, plt.cm.gray)
     ax4.imshow(blend)
+    plt.show()
 
 
 def blending_example(im1_name, im2_name, mask_name):
@@ -447,12 +448,14 @@ def blending_example0():
     """
     return blending_example(TEST_IM1, TEST_IM2, TEST_MASK)
 
+
 def blending_example1():
     """
     Blends two images using a mask and returns them and their blend.
     :return: im1, im2, mask, im_blend
     """
     return blending_example(IMAGE_MICHALI, IMAGE_ELLA, MASK_MICHELLA)
+
 
 def blending_example11():
     """
@@ -461,9 +464,18 @@ def blending_example11():
     """
     return blending_example(IMAGE_ELLA, IMAGE_MICHALI, MASK_MICHELLA)
 
+
 def blending_example2():
     """
     Blends two images using a mask and returns them and their blend.
     :return: im1, im2, mask, im_blend
     """
     return blending_example(IMAGE_LANDSCAPE, IMAGE_SPACE, MASK_LANDSPACE)
+
+
+def blending_example3():
+    """
+    Blends two images using a mask and returns them and their blend.
+    :return: im1, im2, mask, im_blend
+    """
+    return blending_example(IMAGE_APPLE1, IMAGE_APPLE2, MASK_APPLE)

@@ -1,0 +1,2 @@
+Q3: What happens (and why this happens) to the result blending from section 4 image when blending is performed with a varying number of pyramid levels (max_levels = 1,2,3,4,5,...)?
+The border between the two images becomes smoother as we increase the number of levels, because levels from further reduced versions are blended and these levels are more blurred as we go down the pyramid to smaller layers.
