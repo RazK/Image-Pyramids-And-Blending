@@ -106,10 +106,10 @@ def main():
     # testRenderGaussianPyramid(image)
     # testRenderLaplacianPyramid(image)
     # testRelPath()
-    testBlending()
+    #testBlending()
     # testBlendingExample1()
     #testBlendingExample3()
-    #testBlendingExample2()
+    testBlendingExample2()
     #testBlendingExample11()
 
 

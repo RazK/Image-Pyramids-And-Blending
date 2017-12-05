@@ -54,7 +54,7 @@ IMAGE_APPLE2 = "external/apple2.jpg"
 MASK_APPLE = "external/mask_apple.jpg"
 IMAGE_SPACE = "external/space2.jpg"
 IMAGE_LANDSCAPE = "external/landscape.jpg"
-MASK_LANDSPACE = "external/mask_landspace.jpg"
+MASK_LANDSPACE = "external/mask_landspace_bw.jpg"
 
 
 # Helper methods
@@ -90,7 +90,7 @@ def gaussian_kernel(kernel_size):
     kernel = np.array([1])
     for i in range(0, kernel_size - 1):
         kernel = sconvolve(kernel, KERNEL_GAUSS_BASE) / 2
-    return kernel
+    return np.expand_dims(kernel, axis=0)
 
 
 def gaussian_kernel_2D(kernel_size):
@@ -135,9 +135,9 @@ def blur(im, kernel, factor=1):
     :param factor: Factor by which to multiply the kernel.
     :return: blurry image (grayscale float64 image).
     """
-    kernel2D = np.expand_dims(kernel, axis=0) * factor
-    blurY = fconvolve(im, kernel2D.transpose())
-    return fconvolve(blurY, kernel2D)
+    fkernel = kernel * factor
+    blurY = fconvolve(im, fkernel.transpose())
+    return fconvolve(blurY, fkernel)
 
 
 def reduce_image_spatial(im, kernel_size):
@@ -238,7 +238,6 @@ def build_gaussian_pyramid(im, max_levels, filter_size):
     pyr = [np.copy(im)] * levels
     for level in range(1, levels):
         pyr[level] = reduce_image(pyr[level - 1], filter_vec)
-
     return pyr, filter_vec
 
 
@@ -435,7 +434,7 @@ def blending_example(im1_name, im2_name, mask_name):
     """
     im1 = read_image(relpath(im1_name), MODE_RGB)
     im2 = read_image(relpath(im2_name), MODE_RGB)
-    mask = read_image(relpath(mask_name), MODE_GRAY)
+    mask = read_image(relpath(mask_name), MODE_GRAY).astype(np.bool)
     blend = blendRGB(im1, im2, mask, 10, 3, 13)
     show_blending_example(im1, im2, mask, blend)
     return im1, im2, mask, blend
@@ -454,7 +453,7 @@ def blending_example1():
     Blends two images using a mask and returns them and their blend.
     :return: im1, im2, mask, im_blend
     """
-    return blending_example(IMAGE_MICHALI, IMAGE_ELLA, MASK_MICHELLA)
+    return blending_example(IMAGE_ELLA, IMAGE_MICHALI, MASK_MICHELLA)
 
 
 def blending_example11():
@@ -470,7 +469,7 @@ def blending_example2():
     Blends two images using a mask and returns them and their blend.
     :return: im1, im2, mask, im_blend
     """
-    return blending_example(IMAGE_LANDSCAPE, IMAGE_SPACE, MASK_LANDSPACE)
+    return blending_example(IMAGE_SPACE, IMAGE_LANDSCAPE, MASK_LANDSPACE)
 
 
 def blending_example3():
