@@ -99,18 +99,18 @@ def main():
     # testImshow(image)
     # testKernel(kernel)
     # testBuildGaussianPyramid(image)
-    #testBuildGaussianPyramid4Mask(MASK_APPLE)
+    # testBuildGaussianPyramid4Mask(MASK_APPLE)
     # testExpandImageSpatial(image)
     # testBuildLaplacianPyramid(image)
     # testLaplacianToImage(image)
     # testRenderGaussianPyramid(image)
     # testRenderLaplacianPyramid(image)
     # testRelPath()
-    #testBlending()
+    # testBlending()
     # testBlendingExample1()
-    #testBlendingExample3()
+    # testBlendingExample3()
     testBlendingExample2()
-    #testBlendingExample11()
+    testBlendingExample11()
 
 
 if (__name__ == "__main__"):
